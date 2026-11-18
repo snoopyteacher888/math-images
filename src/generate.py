@@ -626,7 +626,8 @@ def generate():
             r = 6+i%5*2
             pair(g,unit,f"{style}-{a}-r{r}","sector",(a,r,style),
                  ["量角器" if style=="protractor" else "扇形" if style=="sector" else "旋轉角",
-                  "角度","頂點",f"{a}度",f"{r}公分"],f"以兩條射線標出 {a} 度的角",2)
+                  "角度","頂點",f"{a}度",f"{r}公分",*(["圓心角","半徑","弧"] if style=="sector" else ["量角"] if style=="protractor" else [])],
+                 f"扇形，半徑 {r} 公分、圓心角 {a} 度" if style=="sector" else f"以兩條射線標出 {a} 度的角",2)
     for g,unit in [(3,"圓"),(6,"圓周長與扇形周長")]:
         for r in (5,7,8,9,10,12):
             pair(g,unit,f"circle-diameter-{2*r}","sector",(90,r,"diameter"),
@@ -747,7 +748,7 @@ def generate():
              "標有三處地點與比例尺的地圖",2)
     for i,gap in enumerate([2,3,4,5,6]):
         pair(6,"怎樣解題",f"interval-{i+1}","interval",(i%3+4,gap),
-             ["間隔","種樹","距離","公尺",f"{gap}公尺"],"等距排列的樹與間隔距離",2)
+             ["間隔","種樹","距離","公尺",f"{gap}公尺","照片","排成一列","每兩"],"等距排列的樹（或一列照片）與間隔距離",2)
     for n in (0,1,2):
         for square in (False,True):
             make(6,"怎樣解題",f"sticks-{n}-{int(square)}","sticks",(n,square),
