@@ -3,7 +3,7 @@ import json
 import math
 from pathlib import Path
 
-from PIL import Image, ImageDraw, ImageFont
+from PIL import Image, ImageDraw, ImageFont, ImageOps
 
 ROOT = Path(__file__).resolve().parents[1]
 FONT = "/usr/share/fonts/opentype/noto/NotoSerifCJK-Regular.ttc"
@@ -52,6 +52,11 @@ def make(grade, unit, name, kind, values, tags, desc):
     rel = f"g{grade}/{name}.png"
     target = ROOT / "images" / rel
     target.parent.mkdir(parents=True, exist_ok=True)
+    # 裁掉四周空白（留 20px），印在考卷上圖才夠大
+    box_ = ImageOps.invert(image.convert("L")).getbbox()
+    if box_:
+        l, t, r, b = box_
+        image = image.crop((max(0, l-20), max(0, t-20), min(width, r+20), min(height, b+20)))
     image.save(target, optimize=True)
     keywords = list(dict.fromkeys([unit, *tags]))
     assert 5 <= len(keywords) <= 10, (name, keywords)
