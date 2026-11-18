@@ -14,9 +14,12 @@ width = 760
 height = 440
 
 
-def text(x, y, value, size=32, anchor="mm"):
-    draw.text((x, y), str(value), font=ImageFont.truetype(FONT, size, index=3),
-              fill=INK, anchor=anchor)
+def text(x, y, value, size=32, anchor="mm", bg=False):
+    font = ImageFont.truetype(FONT, size, index=3)
+    if bg:  # 白底：標籤壓在線上也看得清楚
+        l, t, rr, b = draw.textbbox((x, y), str(value), font=font, anchor=anchor)
+        draw.rectangle((l-4, t-3, rr+4, b+3), fill="white")
+    draw.text((x, y), str(value), font=font, fill=INK, anchor=anchor)
 
 
 def line(*points, color=INK, weight=3):
@@ -270,12 +273,13 @@ def shape(style, base, tall, unknown, grid_on):
             line((xx,y),(xx,min(y+8,y0)))
         line((xx,y0-14),(xx+14,y0-14),(xx+14,y0))
     text(x0+b/2,376,f"{base}公分")
-    text(xx+10 if xx != x0 else x0-12,y0-h/2,f"{'？' if unknown else tall}公分",28,"lm" if xx != x0 else "rm")
+    text(xx+12 if xx != x0 else x0-12,y0-h/2,f"{'？' if unknown else tall}公分",28,"lm" if xx != x0 else "rm",bg=xx != x0)
     if style == "trapezoid":
         text(x0+(b+offset/2)/2,y0-h-25,f"{base-3}公分",28)
     if style == "l":
-        text(x0+b*.75,y0-h/2-25,f"{base//2}公分",28)
-        text(x0+b/2+18,y0-h*.82,f"{tall//2}公分",28,"lm")
+        # 右下台階的寬標在台階上方的外面、缺口的高標在缺口旁邊，兩個不重疊
+        text(x0+b*.75,y0-h/2+24,f"{base//2}公分",28,bg=True)
+        text(x0+b/2+10,y0-h*.78,f"{tall//2}公分",28,"lm",bg=True)
 
 
 def comparison(a,b,unit,unknown):
@@ -345,8 +349,8 @@ def labeled_polygon(sides, labels, corners=False):
     for i,label in enumerate(labels):
         a,b = pts[i],pts[(i+1)%sides]
         x,y = a if corners else ((a[0]+b[0])/2,(a[1]+b[1])/2)
-        factor = .73 if corners else 1.28
-        text(380+(x-380)*factor,206+(y-206)*factor,label,30)
+        factor = .6 if corners else 1.28
+        text(380+(x-380)*factor,206+(y-206)*factor,label,30,bg=not corners)
 
 
 def gauge(capacity, amount, cup):
@@ -363,7 +367,8 @@ def gauge(capacity, amount, cup):
         for i in range(11):
             a = 225-i*27
             line(point(380,202,145,a),point(380,202,157,a))
-            text(*point(380,202,115,a),i*capacity//10,28)
+            if i % 2 == 0:  # 數字隔一格標一次，才不會擠在一起
+                text(*point(380,202,112,a),i*capacity//10,28)
         line((380,202),point(380,202,95,225-amount*270/capacity),weight=6)
         text(380,390,"公克")
 
@@ -381,10 +386,10 @@ def money(values):
     step = min(145,680/len(values))
     for i,value in enumerate(values):
         x = (width-step*len(values))/2+step*(i+.5)
-        if value>=100:
-            box(x-62,145,124,110,BLUE)
-        else:
+        if value in (1, 5, 10, 50):  # 真的有的硬幣才畫成圓形
             circle(x,200,53,BLUE)
+        else:  # 紙鈔或價錢標籤
+            box(x-62,145,124,110,BLUE)
         text(x,200,f"{value}元",30)
 
 
@@ -397,6 +402,20 @@ def interval(count, gap, unknown):
         if i:
             text(x-step/2,293,f"{'？' if unknown else gap}公尺",28)
     line((85,260),(670,260))
+
+
+def dashed(a, b, n=16):
+    for k in range(0, n, 2):
+        line((a[0]+(b[0]-a[0])*k/n, a[1]+(b[1]-a[1])*k/n), (a[0]+(b[0]-a[0])*(k+1)/n, a[1]+(b[1]-a[1])*(k+1)/n), weight=2)
+
+
+def price_tags(values):
+    step = min(160,680/len(values))
+    for i,value in enumerate(values):
+        x = (width-step*len(values))/2+step*(i+.5)
+        draw.polygon([(x-60,150),(x+42,150),(x+64,200),(x+42,250),(x-60,250)],fill=BLUE,outline=INK,width=3)
+        circle(x+38,200,6)
+        text(x-8,200,f"{value}元",30)
 
 
 def solid(sides, pyramid, net):
@@ -416,17 +435,38 @@ def solid(sides, pyramid, net):
         line((235,120),(235,310))
         line((525,120),(525,310))
         return
-    pts = [(380+150*math.cos(math.tau*i/sides),
-            290+65*math.sin(math.tau*i/sides)) for i in range(sides)]
-    polygon(pts)
     if pyramid:
+        pts = [(380+150*math.cos(math.tau*i/sides+math.pi/2+math.pi/sides+(0.35 if sides == 4 else 0)),
+                320+55*math.sin(math.tau*i/sides+math.pi/2+math.pi/sides+(0.35 if sides == 4 else 0))) for i in range(sides)]
+        apex = (380,64)
+        draw.polygon(pts,fill=BLUE)
+        for i in range(sides):
+            j = (i+1)%sides
+            if (pts[i][1]+pts[j][1])/2 < 320-1: dashed(pts[i],pts[j])
+            else: line(pts[i],pts[j])
         for p in pts:
-            line(p,(380,64))
-    else:
-        upper = [(x,y-158) for x,y in pts]
-        polygon(upper)
-        for p,q in zip(pts,upper):
-            line(p,q)
+            if p[1] < 320-1 and min(q[0] for q in pts)+1 < p[0] < max(q[0] for q in pts)-1: dashed(p,apex)
+            else: line(p,apex)
+        return
+    # 角柱：直立的柱體，上下底面是 sides 邊形（斜看），側邊是鉛直線；看不到的邊畫虛線
+    cy, tall = 345, 210
+    pts = [(380+140*math.cos(math.tau*i/sides+math.pi/2+math.pi/sides+(0.35 if sides == 4 else 0)),
+            cy+55*math.sin(math.tau*i/sides+math.pi/2+math.pi/sides+(0.35 if sides == 4 else 0))) for i in range(sides)]
+    upper = [(x,y-tall) for x,y in pts]
+    xs = [p[0] for p in pts]
+    for i in range(sides):
+        j = (i+1)%sides
+        if (pts[i][1]+pts[j][1])/2 >= cy-1:  # 前面的側面塗色
+            draw.polygon([pts[i],pts[j],upper[j],upper[i]],fill=BLUE)
+    draw.polygon(upper,fill=BLUE)
+    line(*upper,upper[0])
+    for i in range(sides):
+        j = (i+1)%sides
+        if (pts[i][1]+pts[j][1])/2 < cy-1: dashed(pts[i],pts[j])
+        else: line(pts[i],pts[j])
+        silhouette = min(xs)+1 >= pts[i][0] or pts[i][0] >= max(xs)-1
+        if pts[i][1] < cy-1 and not silhouette: dashed(pts[i],upper[i])
+        else: line(pts[i],upper[i])
 
 
 def map_view(scale, distance, unknown):
@@ -440,11 +480,22 @@ def map_view(scale, distance, unknown):
 
 
 def short_division(a,b,p):
-    box(225,90,310,255,BLUE)
-    line((310,110),(310,215),(510,215))
-    for x,y,value in [(270,165,p),(365,165,a),(460,165,b),
-                      (365,265,a//p),(460,265,b//p)]:
-        text(x,y,value,42)
+    # 一直除到兩數互質為止（最後一列是互質的兩數）
+    steps, x, y = [], a, b
+    d = p
+    while d:
+        steps.append((d, x, y)); x, y = x//d, y//d
+        d = next((k for k in range(2, min(x, y)+1) if x % k == 0 and y % k == 0), 0)
+    rows = len(steps)+1
+    top, gap = 60, min(95, 300/rows)
+    box(205,top-10,350,gap*rows+20,BLUE)
+    for i,(d,u,v) in enumerate(steps):
+        yy = top+gap*i+gap/2
+        text(255,yy,d,40)
+        line((300,yy-gap/2+8),(300,yy+gap/2-4),(520,yy+gap/2-4))
+        text(360,yy,u,40); text(465,yy,v,40)
+    yy = top+gap*len(steps)+gap/2
+    text(360,yy,x,40); text(465,yy,y,40)
 
 
 def sticks(n, square):
@@ -513,7 +564,7 @@ def tally(labels, values):
 
 
 
-RENDERERS.update(labeled_polygon=labeled_polygon,gauge=gauge,table=table,money=money,
+RENDERERS.update(labeled_polygon=labeled_polygon,gauge=gauge,table=table,money=money,price_tags=price_tags,
                  interval=interval,solid=solid,map=map_view,short=short_division,
                  curved_perimeter=curved_perimeter,parallel_lines=parallel_lines,tally=tally,
                  sticks=sticks,combinations=combinations)
@@ -668,7 +719,7 @@ def generate():
              (sides,pyramid,net),[name,"展開圖" if net else "立體圖","頂點","邊","面"],
              f"{name}的"+("展開圖" if net else "示意圖"))
     for i,values in enumerate([(35,50,80),(12,24,48),(15,30,60)]):
-        make(5,"整數四則",f"prices-{i+1}","money",(values,),
+        make(5,"整數四則",f"prices-{i+1}","price_tags",(values,),
              ["價牌","買東西","元","價格",*[f"{v}元" for v in values]],"三件物品的價格")
     for a,b,c in [(2,2,2),(2,3,3),(3,2,2),(2,3,5),(3,3,5),(2,5,7)]:
         make(6,"最大公因數與最小公倍數",f"factor-tree-{a*b*c}","tree",(a,b,c),
