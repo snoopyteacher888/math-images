@@ -753,7 +753,7 @@ def generate():
              "標有三處地點與比例尺的地圖",2)
     for i,gap in enumerate([2,3,4,5,6]):
         pair(6,"怎樣解題",f"interval-{i+1}","interval",(i%3+4,gap),
-             ["間隔","種樹","距離","公尺",f"{gap}公尺","照片","排成一列","每兩"],"等距排列的樹（或一列照片）與間隔距離",2)
+             ["間隔","種樹","距離","公尺",f"{gap}公尺",f"{i%3+4}棵","照片","排成一列"],"等距排列的樹（或一列照片）與間隔距離",2)
     for n in (0,1,2):
         for square in (False,True):
             make(6,"怎樣解題",f"sticks-{n}-{int(square)}","sticks",(n,square),
